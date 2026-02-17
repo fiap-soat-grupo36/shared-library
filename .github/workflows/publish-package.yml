@@ -43,6 +43,17 @@ jobs:
             -H "Authorization: token ${GH_PACKAGES_TOKEN}" \
             https://api.github.com/user)
           echo "GitHub /user status: ${USER_STATUS}"
+          TOKEN_OWNER=$(jq -r '.login // ""' /tmp/gh_user.json)
+          echo "Token owner: ${TOKEN_OWNER}"
+          if [ -z "${TOKEN_OWNER}" ]; then
+            echo "::error::Could not resolve token owner from GitHub /user response."
+            cat /tmp/gh_user.json
+            exit 1
+          fi
+          if [ "${TOKEN_OWNER}" != "${GH_PACKAGES_USERNAME}" ]; then
+            echo "::error::GH_PACKAGES_USERNAME (${GH_PACKAGES_USERNAME}) does not match token owner (${TOKEN_OWNER})."
+            exit 1
+          fi
           awk -F': ' 'tolower($1)=="x-oauth-scopes"{print "Token scopes: "$2}' "$USER_HEADERS" | tr -d '\r'
 
           ORG_STATUS=$(curl -sS -o /tmp/gh_org.json -w "%{http_code}" \
