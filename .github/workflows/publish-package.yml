@@ -91,6 +91,15 @@ jobs:
             exit 1
           fi
 
+          SNAPSHOT_STATUS=$(curl -sS -o /tmp/gh_snapshot_meta.txt -w "%{http_code}" \
+            -u "${GH_PACKAGES_USERNAME}:${GH_PACKAGES_TOKEN}" \
+            https://maven.pkg.github.com/fiap-soat-grupo36/shared-library/br/com/fiap/oficina/shared-library/1.0.0-SNAPSHOT/maven-metadata.xml)
+          echo "GitHub Maven snapshot metadata status: ${SNAPSHOT_STATUS}"
+          if [ "${SNAPSHOT_STATUS}" = "401" ]; then
+            echo "::error::Credentials are not authorized on Maven snapshot metadata endpoint."
+            exit 1
+          fi
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
