@@ -28,7 +28,7 @@ jobs:
           server-username: MAVEN_USERNAME
           server-password: MAVEN_TOKEN
         env:
-          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_USERNAME: ${{ secrets.GH_PACKAGES_USERNAME != '' && secrets.GH_PACKAGES_USERNAME || github.actor }}
           MAVEN_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN != '' && secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Publish package
