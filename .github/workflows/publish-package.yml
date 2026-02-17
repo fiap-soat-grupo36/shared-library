@@ -18,6 +18,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Diagnose GitHub Packages auth
+        env:
+          GH_PACKAGES_USERNAME: ${{ secrets.GH_PACKAGES_USERNAME }}
+          GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_PACKAGES_USERNAME:-}" ]; then
+            echo "::error::GH_PACKAGES_USERNAME is empty in this workflow context."
+            exit 1
+          fi
+
+          if [ -z "${GH_PACKAGES_TOKEN:-}" ]; then
+            echo "::error::GH_PACKAGES_TOKEN is empty in this workflow context."
+            exit 1
+          fi
+
+          echo "GH_PACKAGES_USERNAME is available."
+          echo "GH_PACKAGES_TOKEN is available."
+
+          USER_HEADERS=$(mktemp)
+          USER_STATUS=$(curl -sS -o /tmp/gh_user.json -D "$USER_HEADERS" -w "%{http_code}" \
+            -H "Authorization: token ${GH_PACKAGES_TOKEN}" \
+            https://api.github.com/user)
+          echo "GitHub /user status: ${USER_STATUS}"
+          awk -F': ' 'tolower($1)=="x-oauth-scopes"{print "Token scopes: "$2}' "$USER_HEADERS" | tr -d '\r'
+
+          ORG_STATUS=$(curl -sS -o /tmp/gh_org.json -w "%{http_code}" \
+            -H "Authorization: token ${GH_PACKAGES_TOKEN}" \
+            https://api.github.com/orgs/fiap-soat-grupo36)
+          echo "GitHub /orgs/fiap-soat-grupo36 status: ${ORG_STATUS}"
+          if [ "${ORG_STATUS}" != "200" ]; then
+            echo "Org access response:"
+            cat /tmp/gh_org.json
+            exit 1
+          fi
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
