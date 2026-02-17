@@ -56,6 +56,22 @@ jobs:
           fi
           awk -F': ' 'tolower($1)=="x-oauth-scopes"{print "Token scopes: "$2}' "$USER_HEADERS" | tr -d '\r'
 
+          REPO_STATUS=$(curl -sS -o /tmp/gh_repo.json -w "%{http_code}" \
+            -H "Authorization: token ${GH_PACKAGES_TOKEN}" \
+            https://api.github.com/repos/fiap-soat-grupo36/shared-library)
+          echo "GitHub /repos/fiap-soat-grupo36/shared-library status: ${REPO_STATUS}"
+          if [ "${REPO_STATUS}" != "200" ]; then
+            echo "Repo access response:"
+            cat /tmp/gh_repo.json
+            exit 1
+          fi
+          REPO_PUSH=$(jq -r '.permissions.push // false' /tmp/gh_repo.json)
+          echo "Repo push permission: ${REPO_PUSH}"
+          if [ "${REPO_PUSH}" != "true" ]; then
+            echo "::error::Token owner does not have push permission on shared-library repository."
+            exit 1
+          fi
+
           ORG_STATUS=$(curl -sS -o /tmp/gh_org.json -w "%{http_code}" \
             -H "Authorization: token ${GH_PACKAGES_TOKEN}" \
             https://api.github.com/orgs/fiap-soat-grupo36)
@@ -63,6 +79,15 @@ jobs:
           if [ "${ORG_STATUS}" != "200" ]; then
             echo "Org access response:"
             cat /tmp/gh_org.json
+            exit 1
+          fi
+
+          PKG_STATUS=$(curl -sS -o /tmp/gh_pkg.txt -w "%{http_code}" \
+            -u "${GH_PACKAGES_USERNAME}:${GH_PACKAGES_TOKEN}" \
+            https://maven.pkg.github.com/fiap-soat-grupo36/shared-library/br/com/fiap/oficina/shared-library/maven-metadata.xml)
+          echo "GitHub Maven endpoint metadata status: ${PKG_STATUS}"
+          if [ "${PKG_STATUS}" = "401" ]; then
+            echo "::error::Credentials are not authorized on GitHub Maven endpoint."
             exit 1
           fi
 
